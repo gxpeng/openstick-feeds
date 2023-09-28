@@ -15,7 +15,7 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/gxpeng/qcom-firmware.git
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_VERSION:=0766024bed8c8e7c9fc6029c7662dcb55d801dbd
-PKG_MIRROR_HASH:=bcb08a2c64fb26ff1216a56990890216c47b67d7d015809513484b9c0e7bd5c9
+PKG_MIRROR_HASH:=skip
 
 PKG_MAINTAINER:=Handsomeyingyan <handsomeyingyan@gmail.com>
 STRIP:=:
@@ -58,7 +58,7 @@ define Build/Compile
 	mkdir $(PKG_BUILD_DIR)/openstick-mf32
 	mcopy -i $(PKG_BUILD_DIR)/openstick-mf32-modem.bin -p -m -v \
 		::image/mba.mbn ::image/modem.* ::image/wcnss.* $(PKG_BUILD_DIR)/openstick-mf32
-		mkdir $(PKG_BUILD_DIR)/openstick-mf601
+	mkdir $(PKG_BUILD_DIR)/openstick-mf601
 	mcopy -i $(PKG_BUILD_DIR)/openstick-mf601-modem.bin -p -m -v \
 		::image/mba.mbn ::image/modem.* ::image/wcnss.* $(PKG_BUILD_DIR)/openstick-mf601
 	mkdir $(PKG_BUILD_DIR)/wt88047
