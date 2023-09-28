@@ -12,7 +12,7 @@ PKG_NAME:=android-tools
 PKG_VERSION:=4.2.2+git20130218
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/aa889788/android-tools.git
+PKG_SOURCE_URL:=https://github.com/gxpeng/android-tools.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:= b8374aa0817b485d1892131d1a936cf57cf10434
 PKG_MIRROR_HASH:=9508ea6da428d215cffbaa79603c86ac11a78c7619c7bcc39c07fe2623e2bae4
