@@ -21,6 +21,7 @@ uci commit
 /etc/init.d/network restart
 
 # HACK : restart network to find modem after reboot
-echo 'mmcli -m 0 -e && sleep 25 && /etc/init.d/network restart' > /etc/rc.local
+echo '/etc/init.d/gc restart && sleep 25 && /etc/init.d/network restart' > /etc/rc.local
+# echo 'mmcli -m 0 -e && sleep 25 && /etc/init.d/network restart' > /etc/rc.local
 
 opkg remove openstick-tweaks
