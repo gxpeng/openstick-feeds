@@ -6,11 +6,9 @@ PKG_LICENSE:=GPLv3
 PKG_VERSION:=0.0.5-4
 
 define Package/luci-app-mmconfig
-	CATEGORY:=LuCI
-	SUBMENU:=3. Applications
-	TITLE:=Configrure modem bands via mmcli utility
-	PKGARCH:=all
-	DEPENDS:=+luci
+  SECTION:=luci
+  CATEGORY:=LuCI
+  SUBMENU:=3. Applications
 endef
 
 define Package/luci-app-mmconfig/postrm

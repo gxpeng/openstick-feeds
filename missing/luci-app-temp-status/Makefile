@@ -12,6 +12,12 @@ LUCI_DEPENDS:=+lua +luci-lib-nixio +luci-lib-jsonc
 LUCI_PKGARCH:=all
 PKG_LICENSE:=MIT
 
+define Package/luci-app-temp-status
+  SECTION:=luci
+  CATEGORY:=LuCI
+  SUBMENU:=3. Applications
+endef
+
 #include ../../luci.mk
 include $(TOPDIR)/feeds/luci/luci.mk
 
