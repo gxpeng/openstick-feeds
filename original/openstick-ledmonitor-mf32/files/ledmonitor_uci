@@ -1,5 +1,0 @@
-#!/bin/sh
-#
-cp -f /tmp/power /etc/rc.button/power
-chmod 755 /etc/rc.button/power
-rm -f /tmp/power
