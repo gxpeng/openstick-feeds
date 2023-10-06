@@ -10,16 +10,13 @@ msgstr ""
 "X-Generator: Poedit 2.3\n"
 "Last-Translator: \n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
-"Language: ru\n"
+"Language: zh_Hans\n"
 
-msgid "Calculating"
-msgstr "Вычисление"
+msgid "No temperature sensors available"
+msgstr "无可用温度传感器"
 
-msgid "CPU Load"
-msgstr "Загрузка ЦПУ"
+msgid "Sensor"
+msgstr "传感器"
 
-msgid "CPU"
-msgstr "ЦПУ"
-
-msgid "Total Load"
-msgstr "Общая загрузка"
+msgid "Temperature"
+msgstr "温度"
