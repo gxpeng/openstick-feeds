@@ -1,5 +1,6 @@
 #!/bin/sh
 #
+
 cp -f /root/power /etc/rc.button/power
 chmod 755 /etc/rc.button/power
 rm -f /root/power

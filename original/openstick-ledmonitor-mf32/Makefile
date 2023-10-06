@@ -26,12 +26,6 @@ endef
 define Build/Compile
 endef
 
-define Package/$(PKG_NAME)/preinst
-#!/bin/sh
-	rm -f /etc/rc.button/power
-	exit 0
-endef 
-
 define Package/$(PKG_NAME)/install 
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/ledmonitor_init $(1)/etc/init.d/ledmonitor
