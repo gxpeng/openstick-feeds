@@ -5,6 +5,14 @@ LUCI_DEPENDS:=+modemmanager +luci-compat
 PKG_LICENSE:=GPLv3
 PKG_VERSION:=0.0.5-4
 
+define Package/luci-app-mmconfig
+	CATEGORY:=LuCI
+	SUBMENU:=3. Applications
+	TITLE:=Configrure modem bands via mmcli utility
+	PKGARCH:=all
+	DEPENDS:=+luci
+endef
+
 define Package/luci-app-mmconfig/postrm
 	rm -f /etc/config/modemconfig
 endef
