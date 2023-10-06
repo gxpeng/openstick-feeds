@@ -27,13 +27,14 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install 
-	$(INSTALL_DIR)  $(1)/etc/init.d
-	$(INSTALL_BIN)  ./files/ledmonitor_init  $(1)/etc/init.d/ledmonitor
-        $(INSTALL_BIN)  ./files/ledinit_init     $(1)/etc/init.d/ledinit
-        $(INSTALL_DIR)  $(1)/etc/config
-        $(INSTALL_CONF) ./files/ledmonitor_conf  $(1)/etc/config/ledmonitor
-	$(INSTALL_DIR)  $(1)/usr/bin
-	$(INSTALL_BIN)  ./files/ledmonitor_bin   $(1)/usr/bin/ledmonitor
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/ledmonitor_init $(1)/etc/init.d/ledmonitor
+	$(INSTALL_BIN) ./files/ledinit_init $(1)/etc/init.d/ledinit
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) ./files/ledmonitor_conf $(1)/etc/config/ledmonitor
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/ledmonitor_bin $(1)/usr/bin/ledmonitor
 endef 
+
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
