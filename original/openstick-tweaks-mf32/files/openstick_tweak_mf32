@@ -1,0 +1,74 @@
+#!/bin/sh
+#
+# Copyright (c) 2023 By Peng
+#
+
+# HACK: set ap
+ipaddr=$(uci get network.lan.ipaddr 2>/dev/null)
+ssid=$(uci get wireless.@wifi-iface[0].ssid 2>/dev/null)
+pid=$(pgrep -f "config_generate")
+count=0
+while [ -z "$ipaddr" ] || [ -z "$ssid" ] || [ -n "$pid" ] && [ "$count" -lt 20 ] 
+do
+	sleep 2
+        ipaddr=$(uci get network.lan.ipaddr 2>/dev/null)
+        ssid=$(uci get wireless.@wifi-iface[0].ssid 2>/dev/null)
+        pid=$(pgrep -f "config_generate")
+        let count=${count}+1
+done
+/etc/init.d/network restart
+sleep 2
+model=$(cat /sys/firmware/devicetree/base/model 2>/dev/null | awk -F' {1,}' '{printf $1}' | tr a-z A-Z)
+count=0
+while [ -z "$model" ] && [ "$count" -lt 20 ] 
+do
+	sleep 2
+        model=$(cat /sys/firmware/devicetree/base/model 2>/dev/null | awk -F' {1,}' '{printf $1}' | tr a-z A-Z)
+        let count=${count}+1
+done
+mac_suffix=$(cat /sys/class/net/br-lan/address 2>/dev/null | awk -F: '{printf $5$6}' | tr a-z A-Z)
+case "$model" in
+        UFI-M*)
+                ssid="4G MIFI-${mac_suffix}"
+                encryption="psk-mixed"
+                key="1234567890"
+                setssid='imei=$(mmcli -m 0 | grep "equipment id:" | grep -o "[0-9][0-9][0-9][0-9]$") && ssid="4G MIFI-${imei}" && uci set wireless.@wifi-iface[0].ssid="$ssid" && uci commit wireless && /etc/init.d/network restart && cat /etc/rc.local | grep -v "mmcli -m 0 | grep" > /tmp/rc.local && cat /tmp/rc.local > /etc/rc.local'
+                ;;
+        *)
+                ssid="4G UFI-${mac_suffix}"
+                encryption="psk-mixed"
+                key="1234567890"
+                setssid='imei=$(mmcli -m 0 | grep "equipment id:" | grep -o "[0-9][0-9][0-9][0-9]$") && ssid="4G UFI-${imei}" && uci set wireless.@wifi-iface[0].ssid="$ssid" && uci commit wireless && /etc/init.d/network restart && cat /etc/rc.local | grep -v "mmcli -m 0 | grep" > /tmp/rc.local && cat /tmp/rc.local > /etc/rc.local'
+                ;;
+esac
+uci set wireless.@wifi-iface[0].ssid="$ssid"
+uci set wireless.@wifi-iface[0].encryption="$encryption"
+uci set wireless.@wifi-iface[0].key="$key"
+uci commit wireless
+
+uci set network.lan.ipaddr="192.168.100.1"
+uci commit network
+/etc/init.d/network restart
+
+cat /etc/rc.local | grep -v "exit 0" > /tmp/rc.local
+echo "${setssid}" >> /tmp/rc.local
+cat /tmp/rc.local | grep -v ^$ > /etc/rc.local
+echo "" >> /etc/rc.local
+echo "exit 0" >> /etc/rc.local
+
+# HACK: set hostname
+uci set system.@system[0].hostname=$model
+uci commit system
+
+
+# HACK: set languages
+uci set luci.languages.zh_cn='简体中文 (Chinese Simplified)'; 
+uci commit luci
+
+# HACK: set root's password to "admin"
+echo -e "admin\nadmin" | passwd
+
+# HACK: install ipk
+opkg install /root/*.ipk
+rm -f /root/*.ipk
+

@@ -1,0 +1,6 @@
+
+config monitor 'main'
+        option enabled '1'
+        option interval '1'  
+	option status 'disabled'
+        option counts '0'

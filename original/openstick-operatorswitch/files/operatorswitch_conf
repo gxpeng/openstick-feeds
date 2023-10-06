@@ -1,0 +1,4 @@
+
+config switch 'main'
+        option enabled '1'
+	option operator 'none'

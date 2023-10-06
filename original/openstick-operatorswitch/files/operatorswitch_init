@@ -1,0 +1,94 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2023 by Peng
+#
+
+START=99
+
+start(){
+        enabled=$(uci get operatorswitch.main.enabled)
+        if [ "z""$enabled" == "z1" ]; then
+                mmc=$(mmcli -m 0 2>&1 | grep -c "couldn't find modem")
+                if [ "z""$mmc" == "z0" ]; then
+                        opname=$(mmcli -m 0 | grep -c "CMCC")
+                        if [ "z""$opname" == "z1" ]; then
+                               uci set operatorswitch.main.operator="ChinaMobile" && uci commit 
+                        fi
+                        opname=$(mmcli -m 0 | grep -c "CHN-UNICOM")
+                        if [ "z""$opname" == "z1" ]; then
+                               uci set operatorswitch.main.operator="ChinaUnicom" && uci commit 
+                        fi
+                fi
+                count=0
+                while [ "z""$mmc" == "z1" ]
+                do
+                        operator=$(uci get operatorswitch.main.operator)
+                        case "$operator" in
+                                ChinaMobile)
+                                        operator="ChinaUnicom"
+                                        uci set operatorswitch.main.operator="${operator}" && uci commit
+                                        if [ -e "/operator/${operator}/fsc.img" ]; then
+                                                dd if=/operator/${operator}/modemst1.img of=/dev/mmcblk0p7 bs=512
+                                                dd if=/operator/${operator}/modemst2.img of=/dev/mmcblk0p8 bs=512
+                                                dd if=/operator/${operator}/fsc.img of=/dev/mmcblk0p9 bs=512
+                                                dd if=/operator/${operator}/fsg.img of=/dev/mmcblk0p10 bs=512 
+                                                /etc/init.d/modemmanager restart && /etc/init.d/gc restart && sleep 5 && /etc/init.d/network restart
+                                                mmc=0
+                                        else
+                                                
+                                                mmc=1
+                                        fi
+                                        let count=${count}+1
+                                        ;;
+                                ChinaUnicom)
+                                        operator="ChinaTelecom"
+                                        uci set operatorswitch.main.operator="${operator}" && uci commit
+                                        if [ -e "/operator/${operator}/fsc.img" ]; then
+                                                dd if=/operator/${operator}/modemst1.img of=/dev/mmcblk0p7 bs=512
+                                                dd if=/operator/${operator}/modemst2.img of=/dev/mmcblk0p8 bs=512
+                                                dd if=/operator/${operator}/fsc.img of=/dev/mmcblk0p9 bs=512
+                                                dd if=/operator/${operator}/fsg.img of=/dev/mmcblk0p10 bs=512 
+                                                /etc/init.d/modemmanager restart && /etc/init.d/gc restart && sleep 5 && /etc/init.d/network restart
+                                                mmc=0
+                                        else
+                                                mmc=1
+                                        fi
+                                        let count=${count}+1
+                                        ;;
+                                *)
+                                        operator="ChinaMobile"
+                                        uci set operatorswitch.main.operator="${operator}" && uci commit
+                                        if [ -e "/operator/${operator}/fsc.img" ]; then
+                                                dd if=/operator/${operator}/modemst1.img of=/dev/mmcblk0p7 bs=512
+                                                dd if=/operator/${operator}/modemst2.img of=/dev/mmcblk0p8 bs=512
+                                                dd if=/operator/${operator}/fsc.img of=/dev/mmcblk0p9 bs=512
+                                                dd if=/operator/${operator}/fsg.img of=/dev/mmcblk0p10 bs=512 
+                                                /etc/init.d/modemmanager restart && /etc/init.d/gc restart && sleep 5 && /etc/init.d/network restart
+                                                mmc=0
+                                        else
+                                                mmc=1
+                                        fi
+                                        let count=${count}+1
+                                        ;;
+                        esac
+                        if [ ${count} -ge 3 ]; then
+                                mmc=0
+                        fi 
+                done
+        fi
+        operator=$(uci get operatorswitch.main.operator)
+	echo "operator is $operator"	
+}
+
+stop() {
+	echo "stopped"
+}
+
+restart(){
+	stop
+	start
+}
+
+boot() {
+	QUIET=-q
+	start
+}

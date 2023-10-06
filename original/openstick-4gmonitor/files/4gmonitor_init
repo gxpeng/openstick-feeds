@@ -1,0 +1,123 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2023 by Peng
+#
+
+START=99
+
+monitor(){
+        enabled=$(uci get 4gmonitor.main.enabled)
+        status=$(uci get 4gmonitor.main.status)
+        counts=$(uci get 4gmonitor.main.counts)
+        if [ "z""$enabled" == "z1" ]; then
+                checks=0
+                while [ "$checks" -lt 5 ]
+                do
+                        mmc=$(mmcli -m 0 | grep -m 1 "state:" | grep -o "connected")
+                        if [ "$mmc" != "connected" ] ; then
+                                mmc=$(mmcli -m 0 | grep -m 1 "state:" | grep -o "registered")
+                                if [ "$mmc" != "registered" ]; then
+                                        mmc="disabled"
+                                fi
+                        fi
+                        
+                        case "$mmc" in
+                                connected)
+                                        if [ "$status" != "$mmc" ] || [ $counts -gt 0 ]; then
+                                                uci set 4gmonitor.main.status="$mmc"
+                                                uci set 4gmonitor.main.counts="0"
+                                                uci commit
+                                        fi
+                                        let check=${check}+5
+                                        ;;
+                                registered)
+                                        if [ "$status" != "$mmc" ]; then
+                                                uci set 4gmonitor.main.status="$mmc"
+                                                uci set 4gmonitor.main.counts="1"
+                                                uci commit
+                                        elif [ $counts -gt 3 ]; then
+                                                uci set 4gmonitor.main.counts="0"
+                                                uci commit
+                                                # ifdown modem && ifup modem
+                                                # /etc/init.d/network restart
+                                                ubus call network.interface.modem down
+                                                sleep 1
+                                                ubus call network.interface.modem up
+                                        else
+                                                let counts=${counts}+1
+                                                uci set 4gmonitor.main.counts="$counts"
+                                                uci commit
+                                        fi
+                                        ;;
+                                *)
+                                        if [ "$status" != "$mmc" ]; then
+                                                uci set 4gmonitor.main.status="$mmc"
+                                                uci set 4gmonitor.main.counts="1"
+                                                uci commit
+                                        else
+                                                let counts=${counts}+1
+                                                uci set 4gmonitor.main.counts="$counts"
+                                                uci commit
+                                        fi
+                                        ;;
+                        esac
+                        
+                        let checks=${checks}+1
+                        if [ "$checks" -lt 5 ]; then
+                                sleep 10
+                        fi
+                done
+        else
+                if [ "z""$counts" != "z0" ]; then
+                        uci set 4gmonitor.main.counts="0" && uci commit
+                fi
+        fi
+}
+
+reset() {
+        uci set 4gmonitor.main.status="disabled"
+        uci set 4gmonitor.main.counts="0"
+        uci commit
+}
+
+start() {
+        set_crontab
+        monitor 
+}
+
+stop() {
+	echo "stopped"
+}
+
+restart(){
+	stop
+	start
+}
+
+boot() {
+	QUIET=-q
+        reset
+	start
+}
+
+set_crontab() {
+        enabled=$(uci get 4gmonitor.main.enabled)
+        interval=$(uci get 4gmonitor.main.interval)
+	[ -f /etc/crontabs/root ] || touch /etc/crontabs/root
+	cron=`cat /etc/crontabs/root | grep "/etc/init.d/4gmonitor start"`
+	if [ "z""${enabled}" != "z0" ] && [ "z""${interval}" != "z0" ]; then
+		new="*/${interval} * * * * /etc/init.d/4gmonitor start"
+		if [ "z${cron}" != "z${new}" ] ; then
+			cat /etc/crontabs/root | grep -v "/etc/init.d/4gmonitor start" > /tmp/crontabs_4gmonitor
+			echo "" >> /tmp/crontabs_4gmonitor
+			echo "*/${interval} * * * * /etc/init.d/4gmonitor start" >> /tmp/crontabs_4gmonitor
+			cat /tmp/crontabs_4gmonitor | grep -v ^$ > /etc/crontabs/root
+			/etc/init.d/cron restart
+		fi
+	else
+		if [ "z""${cron}" != "z" ] ; then
+			cat /etc/crontabs/root | grep -v "/etc/init.d/4gmonitor start" > /tmp/crontabs_4gmonitor
+			cat /tmp/crontabs_4gmonitor | grep -v ^$ > /etc/crontabs/root
+			/etc/init.d/cron restart
+		fi
+	fi
+}
