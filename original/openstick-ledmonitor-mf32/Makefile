@@ -26,9 +26,10 @@ endef
 define Build/Compile
 endef
 
-define Package/$(PKG_NAME)/preinst 
+define Package/$(PKG_NAME)/preinst
 #!/bin/sh
 	rm -f /etc/rc.button/power
+	exit 0
 endef 
 
 define Package/$(PKG_NAME)/install 
@@ -39,8 +40,10 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_CONF) ./files/ledmonitor_conf $(1)/etc/config/ledmonitor
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/ledmonitor_bin $(1)/usr/bin/ledmonitor
-	$(INSTALL_DIR) $(1)/tmp
-	$(INSTALL_BIN) ./files/power $(1)/etc/rc.button/power
+	$(INSTALL_DIR) $(1)/root
+	$(INSTALL_BIN) ./files/power $(1)/root/power
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/ledmonitor_uci $(1)/etc/uci-defaults/ledmonitor
 endef 
 
 
