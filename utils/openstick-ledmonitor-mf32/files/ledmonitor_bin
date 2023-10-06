@@ -1,0 +1,362 @@
+#!/bin/sh
+# Copyright (C) 2023 By Peng
+#
+
+source /lib/functions/leds.sh
+
+led_set_bat() {
+
+        trigger=$(cat /sys/class/leds/bat_1/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_bat_1="timer"
+		delay_on_1=$(cat /sys/class/leds/bat_1/delay_on)
+		delay_off_1=$(cat /sys/class/leds/bat_1/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/bat_1/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_bat_1="on"
+                else
+                        status_bat_1="off"
+                fi
+        fi
+
+        trigger=$(cat /sys/class/leds/bat_2/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_bat_2="timer"
+		delay_on_2=$(cat /sys/class/leds/bat_2/delay_on)
+		delay_off_2=$(cat /sys/class/leds/bat_2/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/bat_2/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_bat_2="on"
+                else
+                        status_bat_2="off"
+                fi
+        fi
+
+        trigger=$(cat /sys/class/leds/bat_3/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_bat_3="timer"
+		delay_on_3=$(cat /sys/class/leds/bat_3/delay_on)
+		delay_off_3=$(cat /sys/class/leds/bat_3/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/bat_3/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_bat_3="on"
+                else
+                        status_bat_3="off"
+                fi
+        fi
+
+        trigger=$(cat /sys/class/leds/bat_4/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_bat_4="timer"
+		delay_on_4=$(cat /sys/class/leds/bat_4/delay_on)
+		delay_off_4=$(cat /sys/class/leds/bat_4/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/bat_4/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_bat_4="on"
+                else
+                        status_bat_4="off"
+                fi
+        fi
+
+        if [ "$1" == "timer" ]; then
+                if [ "$1" != "$status_bat_1" ] || [ "$5" != "$delay_on_1" ] || [ "$6" != "$delay_off_1" ]; then
+			led_timer bat_1 $5 $6
+		fi
+        elif [ "$1" != "$status_bat_1" ]; then
+                if [ "$1" == "on" ]; then
+                        led_on bat_1
+                elif [ "$1" == "off" ]; then
+                        led_off bat_1
+                else
+                        result="done"
+                fi
+        fi
+
+        if [ "$2" == "timer" ]; then
+                if [ "$2" != "$status_bat_2" ] || [ "$5" != "$delay_on_2" ] || [ "$6" != "$delay_off_2" ]; then
+			led_timer bat_2 $5 $6
+		fi
+        elif [ "$2" != "$status_bat_2" ]; then
+                if [ "$2" == "on" ]; then
+                        led_on bat_2
+                elif [ "$2" == "off" ]; then
+                        led_off bat_2
+                else
+                        result="done"
+                fi
+        fi
+
+        if [ "$3" == "timer" ]; then
+                if [ "$3" != "$status_bat_3" ] || [ "$5" != "$delay_on_3" ] || [ "$6" != "$delay_off_3" ]; then
+			led_timer bat_3 $5 $6
+		fi
+        elif [ "$3" != "$status_bat_3" ]; then
+                if [ "$3" == "on" ]; then
+                        led_on bat_3
+                elif [ "$3" == "off" ]; then
+                        led_off bat_3
+                else
+                        result="done"
+                fi
+        fi
+
+        if [ "$4" == "timer" ]; then
+                if [ "$4" != "$status_bat_4" ] || [ "$5" != "$delay_on_4" ] || [ "$6" != "$delay_off_4" ]; then
+			led_timer bat_4 $5 $6
+		fi
+        elif [ "$4" != "$status_bat_4" ]; then
+                if [ "$4" == "on" ]; then
+                        led_on bat_4
+                elif [ "$4" == "off" ]; then
+                        led_off bat_4
+                else
+                        result="done"
+                fi
+        fi
+
+}
+
+led_set_mmc() {
+
+        trigger=$(cat /sys/class/leds/blue:wan/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_mmc_blue="timer"
+                delay_on_blue=$(cat /sys/class/leds/blue:wan/delay_on)
+		delay_off_blue=$(cat /sys/class/leds/blue:wan/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/blue:wan/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_mmc_blue="on"
+                else
+                        status_mmc_blue="off"
+                fi
+        fi
+
+        trigger=$(cat /sys/class/leds/green:wlan/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_mmc_green="timer"
+                delay_on_green=$(cat /sys/class/leds/green:wlan/delay_on)
+		delay_off_green=$(cat /sys/class/leds/green:wlan/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/green:wlan/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_mmc_green="on"
+                else
+                        status_mmc_green="off"
+                fi
+        fi
+
+        trigger=$(cat /sys/class/leds/red:power/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_mmc_red="timer"
+                delay_on_red=$(cat /sys/class/leds/red:power/delay_on)
+		delay_off_red=$(cat /sys/class/leds/red:power/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/red:power/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_mmc_red="on"
+                else
+                        status_mmc_red="off"
+                fi
+        fi
+
+	if [ "$1" == "on" ]; then
+		if [ "$status_mmc_blue" != "timer" ] || [ "$2" != "$delay_on_blue" ] || [ "$3" != "$delay_off_blue" ]; then
+			led_timer blue:wan $2 $3
+		fi
+		if [ "$status_mmc_green" != "off" ]; then
+			led_off green:wlan
+		fi
+		if [ "$status_mmc_red" != "off" ]; then
+			led_off red:power
+		fi
+	elif [ "$1" == "reg" ]; then
+		if [ "$status_mmc_blue" != "off" ]; then
+			led_off blue:wan
+		fi
+		if [ "$status_mmc_green" != "timer" ] || [ "$2" != "$delay_on_green" ] || [ "$3" != "$delay_off_green" ]; then
+			led_timer green:wlan $2 $3
+		fi
+		if [ "$status_mmc_red" != "off" ]; then
+			led_off red:power
+		fi
+	elif [ "$1" == "off" ]; then
+		if [ "$status_mmc_blue" != "off" ]; then
+			led_off blue:wan
+		fi
+		if [ "$status_mmc_green" != "off" ]; then
+			led_off green:wlan
+		fi
+		if [ "$status_mmc_red" != "timer" ] || [ "$2" != "$delay_on_red" ] || [ "$3" != "$delay_off_red" ]; then
+			led_timer red:power $2 $3
+		fi
+	else
+		result="done"
+	fi
+
+}
+
+led_set_wifi() {
+
+        trigger=$(cat /sys/class/leds/blue:wlan/trigger | awk -F"[" '{print $2}' | awk -F"]" '{print $1}')
+        if [ "$trigger" == "timer" ]; then
+                status_wifi="timer"
+                delay_on_wifi=$(cat /sys/class/leds/blue:wlan/delay_on)
+		delay_off_wifi=$(cat /sys/class/leds/blue:wlan/delay_off)
+        else
+                brightness=$(cat /sys/class/leds/blue:wlan/brightness)
+                if [ $brightness -gt 0 ]; then 
+                        status_wifi="on"
+                else
+                        status_wifi="off"
+                fi
+        fi
+
+	if [ "$1" == "on" ]; then
+		if [ "$status_wifi" != "on" ]; then
+			led_on blue:wlan
+		fi
+	elif [ "$1" == "off" ]; then
+		if [ "$status_wifi" != "off" ]; then
+			led_off blue:wlan
+		fi
+	else
+		result="done"
+	fi
+
+}
+
+run_led_monitor() {
+
+	for dev in $(ls /sys/class/power_supply)
+	do
+		type=$(cat /sys/class/power_supply/$dev/type | tr A-Z a-z)
+		if [ "$type" == "battery" ] ; then
+			while [ 1 -gt 0 ]
+			do
+
+			    enabled=$(uci get ledmonitor.main.battery)
+			    if [ "z""$enabled" == "z1" ]; then
+				    capacity=$(cat /sys/class/power_supply/$dev/capacity)
+				    status=$(cat /sys/class/power_supply/$dev/status | tr A-Z a-z)
+				    #echo "status=$status capacity=$capacity"
+				    if [ $capacity -eq 100 ] ; then
+					led_set_bat on on on on
+				    elif [ $capacity -ge 75 ] ; then
+					if [ "$status" == "full" ]; then
+						led_set_bat on on on on
+					elif [ "$status" == "charging" ]; then
+						led_set_bat on on on timer 1000 1000
+					else
+						led_set_bat on on on off
+					fi
+				    elif [ $capacity -ge 50 ] ; then
+					if [ "$status" == "charging" ]; then
+						led_set_bat on on timer off 1000 1000
+					else
+						 led_set_bat on on off off
+					fi
+				    elif [ $capacity -ge 25 ] ; then
+					if [ "$status" == "charging" ]; then
+						led_set_bat on timer off off 1000 1000
+					else
+						led_set_bat on off off off
+					fi
+				    else
+					if [ "$status" == "charging" ]; then
+						led_set_bat timer off off off 1000 1000
+					else
+						led_set_bat timer off off off 100 1000
+					fi
+				    fi
+			    fi
+
+			    enabled=$(uci get ledmonitor.main.4g)
+			    if [ "z""$enabled" == "z1" ]; then
+				    mmc=$(mmcli -m 0 | grep -m 1 "state:" | grep -o "connected")
+				    if [ "$mmc" == "connected" ] ; then
+						led_set_mmc on 1000 1000
+				    else
+						mmc=$(mmcli -m 0 | grep -m 1 "state:" | grep -o "registered")
+						if [ "$mmc" == "registered" ] ; then
+							led_set_mmc reg 1000 1000
+						else
+							led_set_mmc off 1000 1000
+						fi
+				    fi
+			    fi
+
+			    enabled=$(uci get ledmonitor.main.wifi)
+			    if [ "z""$enabled" == "z1" ]; then
+				    wifi=$(iwinfo phy0-ap0 info | grep -c "Signal")
+				    if [ $wifi -gt 0 ] ; then
+						led_set_wifi on 1000 1000 
+				    else
+						led_set_wifi off 1000 1000
+				    fi
+			    fi
+
+			    sleep 5
+
+			done
+		fi
+	done
+}
+
+reset_led_monitor() {
+	led_set_bat off off off off
+	led_off blue:wlan
+	led_on red:power
+	led_on blue:wan
+	led_on green:wlan	
+}
+
+led_on_all() {
+	led_set_bat on on on on
+	led_on blue:wlan
+	led_on red:power
+	led_on blue:wan
+	led_on green:wlan	
+}
+
+led_off_all() {
+	led_set_bat off off off off
+	led_off blue:wlan
+	led_off red:power
+	led_off blue:wan
+	led_off green:wlan	
+}
+
+led_timer_red() {
+	led_timer red:power 200 200
+	
+}
+
+led_timer_blue() {
+	led_timer blue:wan 200 200	
+}
+
+led_timer_green() {
+	led_timer green:wlan 200 200	
+}
+
+led_timer_wifi() {
+	led_timer blue:wlan 200 200	
+}
+
+if [ "$1" ] ;then
+	[ $1 == "run_led_monitor" ] && run_led_monitor
+	[ $1 == "reset_led_monitor" ] && reset_led_monitor
+	[ $1 == "led_on_all" ] && led_on_all
+	[ $1 == "led_off_all" ] && led_off_all
+	[ $1 == "led_timer_red" ] && led_timer_red
+	[ $1 == "led_timer_blue" ] && led_timer_blue
+	[ $1 == "led_timer_green" ] && led_timer_green
+	[ $1 == "led_timer_wifi" ] && led_timer_wifi
+	exit 0
+fi
+

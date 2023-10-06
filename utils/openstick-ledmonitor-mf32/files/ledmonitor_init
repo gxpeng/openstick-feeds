@@ -1,0 +1,33 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2023 by Peng
+#
+
+START=99
+
+start(){
+	state=`pgrep -f "/usr/bin/ledmonitor"`
+	if [ ! -z "$state" ]; then
+		restart
+	else
+		/usr/bin/ledmonitor run_led_monitor &
+	fi
+	echo "ledmonitor is starting now ..."	
+}
+
+stop() {
+	kill -9 `pgrep -f "/usr/bin/ledmonitor"` 2>/dev/null
+	/usr/bin/ledmonitor reset_led_monitor &
+	echo "ledmonitor exit ..."
+}
+
+restart(){
+	stop
+	sleep 1
+	start
+	echo "restarted."
+}
+
+boot() {
+	QUIET=-q
+	start
+}

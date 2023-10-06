@@ -1,0 +1,7 @@
+
+config monitor 'main'
+	option 4g '1'
+	option wifi '1'
+	option battery '1'
+
+
