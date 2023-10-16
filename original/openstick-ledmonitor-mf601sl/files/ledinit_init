@@ -1,0 +1,32 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2023 by Peng
+#
+
+START=12
+
+
+led_init() {
+	/usr/bin/ledmonitor led_on_all
+	sleep 2
+	/usr/bin/ledmonitor reset_led_monitor
+}
+
+start(){
+	led_init
+        echo "started"	
+}
+
+stop() {
+	echo "stopped"
+}
+
+restart(){
+	stop
+	start
+	echo "restarted."
+}
+
+boot() {
+	QUIET=-q
+	start
+}

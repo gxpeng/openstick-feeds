@@ -12,9 +12,9 @@ monitor(){
                 checks=0
                 while [ "$checks" -lt 5 ]
                 do
-                        mmc=$(mmcli -m 0 | grep -m 1 "state:" | grep -o "connected")
+                        mmc=$(mmcli -m 0 2>&1 | grep -m 1 "state:" | grep -o "connected")
                         if [ "$mmc" != "connected" ] ; then
-                                mmc=$(mmcli -m 0 | grep -m 1 "state:" | grep -o "registered")
+                                mmc=$(mmcli -m 0 2>&1 | grep -m 1 "state:" | grep -o "registered")
                                 if [ "$mmc" != "registered" ]; then
                                         mmc="disabled"
                                 fi
@@ -25,7 +25,7 @@ monitor(){
                                         if [ "$status" != "$mmc" ] || [ $counts -gt 0 ]; then
                                                 uci set 4gmonitor.main.status="$mmc"
                                                 uci set 4gmonitor.main.counts="0"
-                                                uci commit
+                                                uci commit 4gmonitor
                                         fi
                                         let check=${check}+5
                                         ;;
@@ -33,10 +33,10 @@ monitor(){
                                         if [ "$status" != "$mmc" ]; then
                                                 uci set 4gmonitor.main.status="$mmc"
                                                 uci set 4gmonitor.main.counts="1"
-                                                uci commit
+                                                uci commit 4gmonitor
                                         elif [ $counts -gt 3 ]; then
                                                 uci set 4gmonitor.main.counts="0"
-                                                uci commit
+                                                uci commit 4gmonitor
                                                 # ifdown modem && ifup modem
                                                 # /etc/init.d/network restart
                                                 ubus call network.interface.modem down
@@ -45,18 +45,18 @@ monitor(){
                                         else
                                                 let counts=${counts}+1
                                                 uci set 4gmonitor.main.counts="$counts"
-                                                uci commit
+                                                uci commit 4gmonitor
                                         fi
                                         ;;
                                 *)
                                         if [ "$status" != "$mmc" ]; then
                                                 uci set 4gmonitor.main.status="$mmc"
                                                 uci set 4gmonitor.main.counts="1"
-                                                uci commit
+                                                uci commit 4gmonitor
                                         else
                                                 let counts=${counts}+1
                                                 uci set 4gmonitor.main.counts="$counts"
-                                                uci commit
+                                                uci commit 4gmonitor
                                         fi
                                         ;;
                         esac
@@ -68,7 +68,7 @@ monitor(){
                 done
         else
                 if [ "z""$counts" != "z0" ]; then
-                        uci set 4gmonitor.main.counts="0" && uci commit
+                        uci set 4gmonitor.main.counts="0" && uci commit 4gmonitor
                 fi
         fi
 }
@@ -76,7 +76,7 @@ monitor(){
 reset() {
         uci set 4gmonitor.main.status="disabled"
         uci set 4gmonitor.main.counts="0"
-        uci commit
+        uci commit 4gmonitor
 }
 
 start() {

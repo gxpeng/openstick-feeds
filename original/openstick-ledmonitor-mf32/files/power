@@ -1,9 +1,9 @@
 #!/bin/sh
 
-[ "${ACTION}" = "released" ] || exit 0
-
-# Double-click Shutdown
 # Copyright By Zy143L
+# Modified By Phang
+
+[ "${ACTION}" = "released" ] || exit 0
 
 lockfile="/tmp/toff.lock"
 power_led="/sys/class/leds/red:power"
@@ -12,29 +12,30 @@ delay=1
 touch_lock() {
     touch "$lockfile"
     sleep $delay
-    rm -rf "$lockfile"
+    rm -f "$lockfile"
 }
 
 shutdown() {
-    echo "timer" > "${power_led}/trigger"
-    echo "1" > "${power_led}/brightness"
-    /sbin/poweroff
+    /etc/init.d/ledmonitor stop
+    /usr/bin/ledmonitor led_off_all
+    /usr/bin/ledmonitor led_timer_red
+    sleep 2
+    /sbin/poweroff -f
 }
 
 restart_network() {
+    /usr/bin/ledmonitor led_timer_wifi && /usr/bin/ledmonitor led_timer_mmc
     /etc/init.d/gc reload
     sleep 3
     /etc/init.d/network restart
 }
 
 if [ "$SEEN" -ge 6 ]; then
-    /usr/bin/ledmonitor led_timer_wifi && /usr/bin/ledmonitor led_timer_green
+    # Press more then 6s to restart network
     restart_network
 elif [ -e "$lockfile" ]; then
+    # Double-click Shutdown
     rm -rf "$lockfile"
-    /etc/init.d/ledmonitor stop
-    sleep $delay
-    /usr/bin/ledmonitor led_off_all
     shutdown
 else
     touch_lock &

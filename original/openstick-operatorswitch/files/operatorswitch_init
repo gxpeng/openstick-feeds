@@ -11,11 +11,11 @@ start(){
                 if [ "z""$mmc" == "z0" ]; then
                         opname=$(mmcli -m 0 | grep -c "CMCC")
                         if [ "z""$opname" == "z1" ]; then
-                               uci set operatorswitch.main.operator="ChinaMobile" && uci commit 
+                               uci set operatorswitch.main.operator="ChinaMobile" && uci commit operatorswitch
                         fi
                         opname=$(mmcli -m 0 | grep -c "CHN-UNICOM")
                         if [ "z""$opname" == "z1" ]; then
-                               uci set operatorswitch.main.operator="ChinaUnicom" && uci commit 
+                               uci set operatorswitch.main.operator="ChinaUnicom" && uci commit operatorswitch
                         fi
                 fi
                 count=0
@@ -25,7 +25,7 @@ start(){
                         case "$operator" in
                                 ChinaMobile)
                                         operator="ChinaUnicom"
-                                        uci set operatorswitch.main.operator="${operator}" && uci commit
+                                        uci set operatorswitch.main.operator="${operator}" && uci commit operatorswitch
                                         if [ -e "/operator/${operator}/fsc.img" ]; then
                                                 dd if=/operator/${operator}/modemst1.img of=/dev/mmcblk0p7 bs=512
                                                 dd if=/operator/${operator}/modemst2.img of=/dev/mmcblk0p8 bs=512
@@ -41,7 +41,7 @@ start(){
                                         ;;
                                 ChinaUnicom)
                                         operator="ChinaTelecom"
-                                        uci set operatorswitch.main.operator="${operator}" && uci commit
+                                        uci set operatorswitch.main.operator="${operator}" && uci commit operatorswitch
                                         if [ -e "/operator/${operator}/fsc.img" ]; then
                                                 dd if=/operator/${operator}/modemst1.img of=/dev/mmcblk0p7 bs=512
                                                 dd if=/operator/${operator}/modemst2.img of=/dev/mmcblk0p8 bs=512
@@ -56,7 +56,7 @@ start(){
                                         ;;
                                 *)
                                         operator="ChinaMobile"
-                                        uci set operatorswitch.main.operator="${operator}" && uci commit
+                                        uci set operatorswitch.main.operator="${operator}" && uci commit operatorswitch
                                         if [ -e "/operator/${operator}/fsc.img" ]; then
                                                 dd if=/operator/${operator}/modemst1.img of=/dev/mmcblk0p7 bs=512
                                                 dd if=/operator/${operator}/modemst2.img of=/dev/mmcblk0p8 bs=512
