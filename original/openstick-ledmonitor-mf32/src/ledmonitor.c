@@ -1,6 +1,6 @@
 /*
  * LED monitor For MF32(4 battery leds)
- * v2023.10.15 By Phang
+ * v2023.10.22 By Phang
  */
 
 #include <stdio.h>
@@ -9,36 +9,33 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <dirent.h>
+#include <time.h>
 
 #define MAX_BUFFER_SIZE 4096
 
-char* catFile(const char* filename) {
-    FILE* file = fopen(filename, "r");
-    if (file == NULL) {
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char* content = (char*)malloc(fileSize + 1);
-    fread(content, sizeof(char), fileSize, file);
-    content[fileSize] = '\0';
-
-    fclose(file);
-    return content;
-}
-
 char* runShell(const char* command) {
     char* buffer = NULL;
-    FILE* fp = popen(command, "r");
+    FILE* fp = NULL;
     
-    if (fp == NULL) {
-        perror("popen");
-        return NULL;
-    }
-    
+	//printf("%s\n", command);
+
+	fp = popen(command, "r");
+
+	// 若执行出错重复三次
+	if (fp == NULL) {
+		sleep(1);
+		fp = popen(command, "r");
+		if (fp == NULL) {
+			sleep(1);
+			fp = popen(command, "r");
+			if (fp == NULL) {
+				//perror("popen");
+				printf("%s\n", command);
+				return NULL;
+			}
+		}
+	}
+
     buffer = (char*)malloc(MAX_BUFFER_SIZE * sizeof(char));
     if (buffer == NULL) {
         perror("malloc");
@@ -48,32 +45,30 @@ char* runShell(const char* command) {
     
     size_t bytesRead = fread(buffer, sizeof(char), MAX_BUFFER_SIZE, fp);
     if (bytesRead == 0) {
-        if (ferror(fp)) {
-            perror("fread");
-        }
+        buffer[bytesRead] = '\0';
     } else {
 		if (buffer[bytesRead - 1] == '\n') {
             buffer[bytesRead - 1] = '\0';
         } else {
 			buffer[bytesRead] = '\0';
 		}
-		return buffer;
     }
-
-    pclose(fp);
+	pclose(fp);
+	//printf("%s\n", buffer);
+	return buffer;
 }
 
 bool led_set_attr(const char* ledName, const char* attrName, const char* value) {
-    char command[256];
-	char *re = NULL;
-	sprintf(command, "echo %s >/sys/class/leds/%s/%s", value, ledName, attrName);
-	re = runShell(command);
-	if( re ){
-		free(re);
+	char command[256];
+	char* result = NULL;
+    sprintf(command, "echo %s >/sys/class/leds/%s/%s", value, ledName, attrName);
+	result = runShell(command);
+    if (result != NULL) {
+        free(result);
 		return true;
-	} else{
-		return false;
-	}
+    } else {
+        return false;
+    }
 }
 
 bool led_on(const char* ledName) {
@@ -104,74 +99,158 @@ bool led_timer(const char* ledName, const char* delayOn, const char* delayOff) {
 
 void led_set_bat(const char* led1, const char* led2, const char* led3, const char* led4, const char* delayOn, const char* delayOff) {
 
-	char *status_bat_1 = NULL;
-    char *delay_on_1 = NULL;
-    char *delay_off_1 = NULL;
+	//printf("bat: %s %s %s %s %s %s\n", led1, led2, led3, led4, delayOn, delayOff);
+	
+	char command[256];
+	char* result = NULL;
 
-    status_bat_1 = runShell("cat /sys/class/leds/bat_1/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_bat_1 && strcmp(status_bat_1, "timer") == 0) {
-		delay_on_1 = runShell("cat /sys/class/leds/bat_1/delay_on");
-		delay_off_1 = runShell("cat /sys/class/leds/bat_1/delay_off");
-    } else {
-		char *brightness_1 = runShell("cat /sys/class/leds/bat_1/brightness");
-		if (strcmp(brightness_1, "1") == 0) {
-			status_bat_1 = "on";
+	char status_bat_1[8];
+	char delay_on_1[8];
+	char delay_off_1[8];
+
+	strcpy(command, "cat /sys/class/leds/bat_1/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_bat_1, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_1/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_1, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/bat_1/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_1, result);
+				free(result);
+			}
 		} else {
-			status_bat_1 = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_1/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_bat_1, "on");
+				} else {
+					strcpy(status_bat_1, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
-	char *status_bat_2 = NULL;
-    char *delay_on_2 = NULL;
-    char *delay_off_2 = NULL;
+	char status_bat_2[8];
+	char delay_on_2[8];
+	char delay_off_2[8];
 
-    status_bat_2 = runShell("cat /sys/class/leds/bat_2/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_bat_2 && strcmp(status_bat_2, "timer") == 0) {
-		delay_on_2 = runShell("cat /sys/class/leds/bat_2/delay_on");
-		delay_off_2 = runShell("cat /sys/class/leds/bat_2/delay_off");
-    } else {
-		char *brightness_2 = runShell("cat /sys/class/leds/bat_2/brightness");
-		if (strcmp(brightness_2, "1") == 0) {
-			status_bat_2 = "on";
+	strcpy(command, "cat /sys/class/leds/bat_2/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_bat_2, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_2/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_2, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/bat_2/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_2, result);
+				free(result);
+			}
 		} else {
-			status_bat_2 = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_2/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_bat_2, "on");
+				} else {
+					strcpy(status_bat_2, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
-	char *status_bat_3 = NULL;
-    char *delay_on_3 = NULL;
-    char *delay_off_3 = NULL;
+	char status_bat_3[8];
+	char delay_on_3[8];
+	char delay_off_3[8];
 
-    status_bat_3 = runShell("cat /sys/class/leds/bat_3/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_bat_3 && strcmp(status_bat_3, "timer") == 0) {
-		delay_on_3 = runShell("cat /sys/class/leds/bat_3/delay_on");
-		delay_off_3 = runShell("cat /sys/class/leds/bat_3/delay_off");
-    } else {
-		char *brightness_3 = runShell("cat /sys/class/leds/bat_3/brightness");
-		if (strcmp(brightness_3, "1") == 0) {
-			status_bat_3 = "on";
+	strcpy(command, "cat /sys/class/leds/bat_3/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_bat_3, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_3/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_3, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/bat_3/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_3, result);
+				free(result);
+			}
 		} else {
-			status_bat_3 = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_3/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_bat_3, "on");
+				} else {
+					strcpy(status_bat_3, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
-	char *status_bat_4 = NULL;
-    char *delay_on_4 = NULL;
-    char *delay_off_4 = NULL;
+	char status_bat_4[8];
+	char delay_on_4[8];
+	char delay_off_4[8];
 
-    status_bat_4 = runShell("cat /sys/class/leds/bat_4/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_bat_4 && strcmp(status_bat_3, "timer") == 0) {
-		delay_on_4 = runShell("cat /sys/class/leds/bat_4/delay_on");
-		delay_off_4 = runShell("cat /sys/class/leds/bat_4/delay_off");
-    } else {
-		char *brightness_4 = runShell("cat /sys/class/leds/bat_4/brightness");
-		if (strcmp(brightness_4, "1") == 0) {
-			status_bat_4 = "on";
+	strcpy(command, "cat /sys/class/leds/bat_4/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_bat_4, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_4/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_4, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/bat_4/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_4, result);
+				free(result);
+			}
 		} else {
-			status_bat_4 = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/bat_4/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_bat_4, "on");
+				} else {
+					strcpy(status_bat_4, "off");
+				}
+				free(result);
+			}
 		}
-    }
-
+	}
 
     if (led1 && strcmp(led1, "timer") == 0) {
         if (strcmp(led1, status_bat_1) != 0 || strcmp(delayOn, delay_on_1) != 0 || strcmp(delayOff, delay_off_1) != 0) {
@@ -221,141 +300,202 @@ void led_set_bat(const char* led1, const char* led2, const char* led3, const cha
         }
     }
 
-	free(status_bat_1);
-    free(delay_on_1);
-    free(delay_off_1);
-
-	free(status_bat_2);
-    free(delay_on_2);
-    free(delay_off_2);
-
-	free(status_bat_3);
-    free(delay_on_3);
-    free(delay_off_3);
-
-	free(status_bat_4);
-    free(delay_on_4);
-    free(delay_off_4);
-
 }
 
 void led_set_mmc(const char* status, const char* delayOn, const char* delayOff) {
 
-	char *status_mmc_blue = NULL;
-    char *delay_on_mmc_blue = NULL;
-    char *delay_off_mmc_blue = NULL;
+	//printf("mmc: %s %s %s\n", status, delayOn, delayOff);
 
-    status_mmc_blue = runShell("cat /sys/class/leds/blue:wan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_mmc_blue && strcmp(status_mmc_blue, "timer") == 0) {
-		delay_on_mmc_blue = runShell("cat /sys/class/leds/blue:wan/delay_on");
-		delay_off_mmc_blue = runShell("cat /sys/class/leds/blue:wan/delay_off");
-    } else {
-		char *brightness_mmc_blue = runShell("cat /sys/class/leds/blue:wan/brightness");
-		if (strcmp(brightness_mmc_blue, "1") == 0) {
-			status_mmc_blue = "on";
+	char command[256];
+	char* result = NULL;
+
+	char status_mmc_blue[8];
+	char delay_on_mmc_blue[8];
+	char delay_off_mmc_blue[8];
+
+	strcpy(command, "cat /sys/class/leds/blue:wan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_mmc_blue, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/blue:wan/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_mmc_blue, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/blue:wan/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_mmc_blue, result);
+				free(result);
+			}
 		} else {
-			status_mmc_blue = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/blue:wan/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_mmc_blue, "on");
+				} else {
+					strcpy(status_mmc_blue, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
-	char *status_mmc_green = NULL;
-    char *delay_on_mmc_green = NULL;
-    char *delay_off_mmc_green = NULL;
+	char status_mmc_green[8];
+	char delay_on_mmc_green[8];
+	char delay_off_mmc_green[8];
 
-    status_mmc_green = runShell("cat /sys/class/leds/green:wlan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_mmc_green && strcmp(status_mmc_green, "timer") == 0) {
-		delay_on_mmc_green = runShell("cat /sys/class/leds/green:wlan/delay_on");
-		delay_off_mmc_green = runShell("cat /sys/class/leds/green:wlan/delay_off");
-    } else {
-		char *brightness_mmc_green = runShell("cat /sys/class/leds/green:wlan/brightness");
-		if (strcmp(brightness_mmc_green, "1") == 0) {
-			status_mmc_green = "on";
+	strcpy(command, "cat /sys/class/leds/green:wlan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_mmc_green, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/green:wlan/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_mmc_green, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/green:wlan/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_mmc_green, result);
+				free(result);
+			}
 		} else {
-			status_mmc_green = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/green:wlan/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_mmc_green, "on");
+				} else {
+					strcpy(status_mmc_green, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
-	char *status_mmc_red = NULL;
-    char *delay_on_mmc_red = NULL;
-    char *delay_off_mmc_red = NULL;
+	char status_mmc_red[8];
+	char delay_on_mmc_red[8];
+	char delay_off_mmc_red[8];
 
-    status_mmc_red = runShell("cat /sys/class/leds/red:power/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_mmc_red && strcmp(status_mmc_red, "timer") == 0) {
-		delay_on_mmc_red = runShell("cat /sys/class/leds/red:power/delay_on");
-		delay_off_mmc_red = runShell("cat /sys/class/leds/red:power/delay_off");
-    } else {
-		char *brightness_mmc_red = runShell("cat /sys/class/leds/red:power/brightness");
-		if (strcmp(brightness_mmc_red, "1") == 0) {
-			status_mmc_red = "on";
+	strcpy(command, "cat /sys/class/leds/red:power/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_mmc_red, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/red:power/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_mmc_red, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/red:power/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_mmc_red, result);
+				free(result);
+			}
 		} else {
-			status_mmc_red = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/red:power/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_mmc_red, "on");
+				} else {
+					strcpy(status_mmc_red, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
     if (status && strcmp(status, "on") == 0) {
         if (strcmp("timer", status_mmc_blue) != 0 || strcmp(delayOn, delay_on_mmc_blue) != 0 || strcmp(delayOff, delay_off_mmc_blue) != 0) {
             led_timer("blue:wan", delayOn, delayOff);
         }
-	if (strcmp("off", status_mmc_green) != 0) {
+		if (strcmp("off", status_mmc_green) != 0) {
             led_off("green:wlan");
         }
-	if (strcmp("off", status_mmc_red) != 0) {
+		if (strcmp("off", status_mmc_red) != 0) {
             led_off("red:power");
         }
     } else if (status && strcmp(status, "reg") == 0) {
         if (strcmp("timer", status_mmc_green) != 0 || strcmp(delayOn, delay_on_mmc_green) != 0 || strcmp(delayOff, delay_off_mmc_green) != 0) {
             led_timer("green:wlan", delayOn, delayOff);
         }
-	if (strcmp("off", status_mmc_red) != 0) {
+		if (strcmp("off", status_mmc_red) != 0) {
             led_off("red:power");
         }
-	if (strcmp("off", status_mmc_blue) != 0) {
+		if (strcmp("off", status_mmc_blue) != 0) {
             led_off("blue:wan");
         }
     } else if (status && strcmp(status, "off") == 0) {
         if (strcmp("timer", status_mmc_red) != 0 || strcmp(delayOn, delay_on_mmc_red) != 0 || strcmp(delayOff, delay_off_mmc_red) != 0) {
             led_timer("red:power", delayOn, delayOff);
         }
-	if (strcmp("off", status_mmc_blue) != 0) {
+		if (strcmp("off", status_mmc_blue) != 0) {
             led_off("blue:wan");
         }
-	if (strcmp("off", status_mmc_green) != 0) {
+		if (strcmp("off", status_mmc_green) != 0) {
             led_off("green:wlan");
         }
     }
-
-	free(status_mmc_blue);
-    free(delay_on_mmc_blue);
-    free(delay_off_mmc_blue);
-
-	free(status_mmc_green);
-    free(delay_on_mmc_green);
-    free(delay_off_mmc_green);
-
-	free(status_mmc_red);
-    free(delay_on_mmc_red);
-    free(delay_off_mmc_red);
-
 }
 
 void led_set_wifi(const char* status, const char* delayOn, const char* delayOff) {
 
-	char *status_wifi = NULL;
-    char *delay_on_wifi = NULL;
-    char *delay_off_wifi = NULL;
+	printf("wifi: %s\n", status);
 
-    status_wifi = runShell("cat /sys/class/leds/blue:wlan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (status_wifi && strcmp(status_wifi, "timer") == 0) {
-		delay_on_wifi = runShell("cat /sys/class/leds/blue:wlan/delay_on");
-		delay_off_wifi = runShell("cat /sys/class/leds/blue:wlan/delay_off");
-    } else {
-		char *brightness_wifi= runShell("cat /sys/class/leds/blue:wlan/brightness");
-		if (strcmp(brightness_wifi, "1") == 0) {
-			status_wifi = "on";
+	char command[256];
+	char* result = NULL;
+
+	char status_wifi[8];
+	char delay_on_wifi[8];
+	char delay_off_wifi[8];
+
+	strcpy(command, "cat /sys/class/leds/blue:wlan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			strcpy(status_wifi, "timer");
+			free(result);
+			strcpy(command, "cat /sys/class/leds/blue:wlan/delay_on");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_on_wifi, result);
+				free(result);
+			}
+			strcpy(command, "cat /sys/class/leds/blue:wlan/delay_off");
+			result = runShell(command);
+			if (result != NULL) {
+				strcpy(delay_off_wifi, result);
+				free(result);
+			}
 		} else {
-			status_wifi = "off";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/blue:wlan/brightness");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "1") == 0) {
+					strcpy(status_wifi, "on");
+				} else {
+					strcpy(status_wifi, "off");
+				}
+				free(result);
+			}
 		}
-    }
+	}
 
     if (status && strcmp(status, "on") == 0) {
 		if (strcmp(status, status_wifi) != 0) {
@@ -366,32 +506,63 @@ void led_set_wifi(const char* status, const char* delayOn, const char* delayOff)
             led_off("blue:wlan");
         }
     }
-
-	free(status_wifi);
-    free(delay_on_wifi);
-    free(delay_off_wifi);
 }
 
 void reset_led_monitor() {
 	led_set_bat("off", "off", "off", "off", "1000", "1000");
 	led_off("blue:wlan");
 	led_on("red:power");
-	led_on("blue:wan");
-	led_on("green:wlan");	
+	led_off("green:wlan");
+	led_off("blue:wan");
 }
 
 void led_on_all() {
 	led_set_bat("on", "on", "on", "on", "1000", "1000");
 	led_on("blue:wlan");
-	led_on("red:power");
-	led_on("blue:wan");
-	led_on("green:wlan");	
+	led_off("red:power");
+	led_off("green:wlan");
+	led_on("blue:wan");	
 }
 
 void led_off_all() {
 	led_set_bat("off", "off", "off", "off", "1000", "1000");
 	led_off("blue:wlan");
 	led_off("red:power");
+	led_off("green:wlan");
+	led_off("blue:wan");
+}
+
+void led_init() {
+	led_set_bat("off", "off", "off", "off", "1000", "1000");
+	led_off("blue:wlan");
+	led_off("red:power");
+	led_off("green:wlan");
+	led_off("blue:wan");
+	sleep(2);
+
+	char command[4096];
+	char* result = NULL;
+	strcat(command, "echo timer >/sys/class/leds/red:power/trigger");
+	strcat(command, "\necho 1000 >/sys/class/leds/red:power/delay_on");
+	strcat(command, "\necho 5000 >/sys/class/leds/red:power/delay_off");
+	strcat(command, "\nsleep 2");
+	strcat(command, "\necho timer >/sys/class/leds/green:wlan/trigger");
+	strcat(command, "\necho 1000 >/sys/class/leds/green:wlan/delay_on");
+	strcat(command, "\necho 5000 >/sys/class/leds/green:wlan/delay_off");
+	strcat(command, "\nsleep 2");
+	strcat(command, "\necho timer >/sys/class/leds/blue:wan/trigger");
+	strcat(command, "\necho 1000 >/sys/class/leds/blue:wan/delay_on");
+	strcat(command, "\necho 5000 >/sys/class/leds/blue:wan/delay_off");
+	result = runShell(command);
+	if( result != NULL ){
+		free(result);
+	}
+}
+
+void led_sleep() {
+	led_set_bat("off", "off", "off", "off", "1000", "1000");
+	led_off("blue:wlan");
+	led_timer("red:power", "100", "5000");
 	led_off("blue:wan");
 	led_off("green:wlan");	
 }
@@ -413,25 +584,33 @@ void led_timer_wifi() {
 }
 
 void led_timer_mmc() {
-	char *mmc_led = NULL;
-    char *mmc_trigger = NULL;
+	char command[256];
+	char* result = NULL;
 
-    mmc_trigger = runShell("cat /sys/class/leds/blue:wan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-    if (mmc_trigger && strcmp(mmc_trigger, "timer") == 0) {
-		mmc_led = "blue:wan";
-    } else {
-		mmc_trigger = runShell("cat /sys/class/leds/green:wlan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
-		if (mmc_trigger && strcmp(mmc_trigger, "timer") == 0) {
-			mmc_led = "green:wlan";
+	char mmc_led[16];
+	
+	strcpy(command, "cat /sys/class/leds/blue:wan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+	result = runShell(command);
+	if (result != NULL) {
+		if (strcmp(result, "timer") == 0) {
+			free(result);
+			strcpy(mmc_led, "blue:wan");
 		} else {
-			mmc_led = "red:power";
+			free(result);
+			strcpy(command, "cat /sys/class/leds/green:wlan/trigger | awk -F\"[\" '{print $2}' | awk -F\"]\" '{print $1}'");
+			result = runShell(command);
+			if (result != NULL) {
+				if (strcmp(result, "timer") == 0) {
+					free(result);
+					strcpy(mmc_led, "green:wlan");
+				} else {
+					free(result);
+					strcpy(mmc_led, "red:power");
+				}
+			}
 		}
-    }
-
-	led_timer(mmc_led, "200", "200");	
-
-	free(mmc_led);
-    free(mmc_trigger);
+	}
+    led_timer(mmc_led, "200", "200");	
 }
 
 void run_led_monitor() {
@@ -440,78 +619,148 @@ void run_led_monitor() {
 	char *status = NULL;
 	char *mmc = NULL;
 	char *wifi = NULL;
+	char *sleeping = NULL;
 	while (1) {
+		/*
+		time_t tNow = time(NULL);
+		struct tm *tLocal;
+		tLocal = localtime(&tNow);
+		printf("%4d-%02d-%02d %02d:%02d:%02d\n", (1900+tLocal->tm_year), (1+tLocal->tm_mon), tLocal->tm_mday, tLocal->tm_hour, tLocal->tm_min, tLocal->tm_sec);
+		*/
+
+		// 检查是否设置为睡眠模式
+		sleeping = runShell("uci get ledmonitor.main.sleeping");
+
 		// 检查是否启用 Battery LED 设置
 		enabled = runShell("uci get ledmonitor.main.battery");
-		if (enabled != NULL && strcmp(enabled, "1") == 0) {
-			capacity = runShell("cat /sys/class/power_supply/pm8916-bms-vm/capacity");
-			//capacity = atoi(result);
-			status = runShell("cat /sys/class/power_supply/pm8916-bms-vm/status | tr A-Z a-z");
-			if (atoi(capacity) == 100) {
-				led_set_bat("on", "on", "on", "on", "1000", "1000");
-			} else if (atoi(capacity) >= 75) {
-				if (strcasecmp(status, "full") == 0) {
-					led_set_bat("on", "on", "on", "on", "1000", "1000");
-				} else if (strcasecmp(status, "charging") == 0) {
-					led_set_bat("on", "on", "on", "timer", "1000", "1000");
-				} else {
-					led_set_bat("on", "on", "on", "off", "1000", "1000");
+		if (enabled != NULL){
+			if (strcmp(enabled, "1") == 0 && strcmp(sleeping, "0") == 0) {
+				capacity = runShell("cat /sys/class/power_supply/pm8916-bms-vm/capacity");
+				status = runShell("cat /sys/class/power_supply/pm8916-bms-vm/status | tr A-Z a-z");
+				if (capacity != NULL && status != NULL) {
+					if (atoi(capacity) == 100) {
+						led_set_bat("on", "on", "on", "on", "1000", "1000");
+					} else if (atoi(capacity) >= 90) {
+						if (strcasecmp(status, "full") == 0) {
+							led_set_bat("on", "on", "on", "on", "1000", "1000");
+						} else if (strcasecmp(status, "charging") == 0) {
+							led_set_bat("on", "on", "on", "timer", "1000", "1000");
+						} else {
+							led_set_bat("on", "on", "on", "on", "1000", "1000");
+						}
+					} else if (atoi(capacity) >= 75) {
+						if (strcasecmp(status, "charging") == 0) {
+							led_set_bat("on", "on", "on", "timer", "1000", "1000");
+						} else {
+							led_set_bat("on", "on", "on", "off", "1000", "1000");
+						}
+					} else if (atoi(capacity) >= 50) {
+						if (strcasecmp(status, "charging") == 0) {
+							led_set_bat("on", "on", "timer", "off", "1000", "1000");
+						} else {
+							led_set_bat("on", "on", "off", "off", "1000", "1000");
+						}
+					} else if (atoi(capacity) >= 25) {
+						if (strcasecmp(status, "charging") == 0) {
+							led_set_bat("on", "timer", "off", "off", "1000", "1000");
+						} else {
+							led_set_bat("on", "off", "off", "off", "1000", "1000");
+						}
+					} else {
+						if (strcasecmp(status, "charging") == 0) {
+							led_set_bat("timer", "off", "off", "off", "1000", "1000");
+						} else {
+							led_set_bat("timer", "off", "off", "off", "100", "1000");
+						}
+					}
 				}
-			} else if (atoi(capacity) >= 50) {
-				if (strcasecmp(status, "charging") == 0) {
-					led_set_bat("on", "on", "timer", "off", "1000", "1000");
-				} else {
-					led_set_bat("on", "on", "off", "off", "1000", "1000");
+				if ( capacity != NULL ) {
+					free(capacity);
 				}
-			} else if (atoi(capacity) >= 25) {
-				if (strcasecmp(status, "charging") == 0) {
-					led_set_bat("on", "timer", "off", "off", "1000", "1000");
-				} else {
-					led_set_bat("on", "off", "off", "off", "1000", "1000");
+				if ( status != NULL ) {
+					free(status);
 				}
 			} else {
-				if (strcasecmp(status, "charging") == 0) {
-					led_set_bat("timer", "off", "off", "off", "1000", "1000");
-				} else {
-					led_set_bat("timer", "off", "off", "off", "100", "1000");
-				}
+				led_set_bat("off", "off", "off", "off", "100", "1000");
 			}
-
-			free(capacity);
-			free(status);
-		}
-		free(enabled);
-
-		// 检查是否启用 4G LED 设置
-		enabled = runShell("uci get ledmonitor.main.4g");
-		if (enabled != NULL && strcmp(enabled, "1") == 0) {
-			mmc = runShell("mmcli -m 0 | grep -m 1 'state:' | grep -o 'connected'");
-			if (mmc != NULL && strcmp(mmc, "connected") == 0) {
-				led_set_mmc("on", "1000", "1000");
-			} else {
-				mmc = runShell("mmcli -m 0 | grep -m 1 'state:' | grep -o 'registered'");
-				if (mmc != NULL && strcmp(mmc, "registered") == 0) {
-					led_set_mmc("reg", "1000", "1000");
-				} else {
-					led_set_mmc("off", "1000", "1000");
-				}
-			}
-			free(mmc);
-		}
-		free(enabled);
+			free(enabled);
+		} 
 
 		// 检查是否启用 WiFi LED 设置
 		enabled = runShell("uci get ledmonitor.main.wifi");
-		if (enabled != NULL && strcmp(enabled, "1") == 0) {
-			wifi = runShell("iwinfo phy0-ap0 info | grep -c 'Signal'");
-			if (wifi != NULL && strcmp(wifi, "1") == 0) {
-				led_set_wifi("on", "1000", "1000");
+		if ( enabled != NULL ) { 
+			if ( strcmp(enabled, "1") == 0 && strcmp(sleeping, "0") == 0 ) {
+				wifi = runShell("iwinfo phy0-ap0 info 2>&1 | grep -c 'Signal'");
+				if ( wifi != NULL ) {
+					if (strcmp(wifi, "1") == 0) {
+						led_set_wifi("on", "1000", "1000");
+					} else {
+						led_set_wifi("off", "1000", "1000");
+					}
+					free(wifi);
+				}
 			} else {
 				led_set_wifi("off", "1000", "1000");
 			}
-			free(wifi);
+			free(enabled);
 		}
-		free(enabled);
+
+		// 检查是否启用 4G LED 设置
+		enabled = runShell("uci get ledmonitor.main.4g");
+		if ( enabled != NULL ) {
+			if ( strcmp(sleeping, "0") == 0 ) {
+				if ( strcmp(enabled, "1") == 0 ) {
+					mmc = runShell("mmcli -m 0 2>&1 | grep -m 1 'state:' | grep -o 'connected'");
+					if ( mmc != NULL ) {
+						if ( strcmp(mmc, "connected") == 0 ) {
+							free(mmc);
+							led_set_mmc("on", "1000", "1000");
+						} else {
+							free(mmc);
+							mmc = runShell("mmcli -m 0 2>&1 | grep -m 1 'state:' | grep -o 'registered'");
+							if ( mmc != NULL ) { 
+								if( strcmp(mmc, "registered") == 0 ) {
+									led_set_mmc("reg", "1000", "1000");
+								} else {
+									led_set_mmc("off", "1000", "1000");
+								}
+								free(mmc);
+							}
+						}
+					}
+				} else {
+					led_set_mmc("off", "1000", "1000");
+				}
+			} else {
+				if ( strcmp(enabled, "1") == 0 ) {
+					mmc = runShell("mmcli -m 0 2>&1 | grep -m 1 'state:' | grep -o 'connected'");
+					if ( mmc != NULL ) {
+						if ( strcmp(mmc, "connected") == 0 ) {
+							free(mmc);
+							led_set_mmc("on", "100", "5000");
+						} else {
+							free(mmc);
+							mmc = runShell("mmcli -m 0 2>&1 | grep -m 1 'state:' | grep -o 'registered'");
+							if ( mmc != NULL ) { 
+								if( strcmp(mmc, "registered") == 0 ) {
+									led_set_mmc("reg", "100", "5000");
+								} else {
+									led_set_mmc("off", "100", "5000");
+								}
+								free(mmc);
+							}
+						}
+					}
+				} else {
+					led_set_mmc("off", "100", "5000");
+				}
+			}
+			free(enabled);
+		}
+
+		if ( sleeping != NULL ) {
+			free(sleeping);
+		}
 
 		// 休眠 5 秒
 		sleep(5);
@@ -520,7 +769,7 @@ void run_led_monitor() {
 
 void show_version() {
 	printf("%s\n", "LED monitor For MF32(4 battery leds)");
-	printf("%s\n", "v2023.10.15 By Phang");
+	printf("%s\n\n", "v2023.10.22 By Phang");
 }
 
 int main(int argc, char* argv[]) {
@@ -543,7 +792,11 @@ int main(int argc, char* argv[]) {
 			led_timer_wifi();
 		} else if (strcmp(argv[1], "led_timer_mmc") == 0) {
 			led_timer_mmc();
-		} else if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0 ) {
+		} else if (strcmp(argv[1], "led_init") == 0) {
+			led_init();
+		} else if (strcmp(argv[1], "led_sleep") == 0) {
+			led_sleep();
+		} else {
 			show_version();
 		}
 	}

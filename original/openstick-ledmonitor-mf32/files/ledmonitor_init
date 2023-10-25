@@ -5,16 +5,16 @@
 START=99
 
 start(){
+	set_crontab
 	state=`pgrep -f "/usr/bin/ledmonitor"`
-	if [ ! -z "$state" ]; then
-		restart
-	else
+	if [ -z "$state" ]; then
 		/usr/bin/ledmonitor run_led_monitor &
 	fi
 	echo "ledmonitor is starting now ..."	
 }
 
 stop() {
+	del_crontab
 	kill -9 `pgrep -f "/usr/bin/ledmonitor"` 2>/dev/null
 	/usr/bin/ledmonitor reset_led_monitor &
 	echo "ledmonitor exit ..."
@@ -30,4 +30,27 @@ restart(){
 boot() {
 	QUIET=-q
 	start
+}
+
+set_crontab() {
+	[ -f /etc/crontabs/root ] || touch /etc/crontabs/root
+	cron=`cat /etc/crontabs/root | grep "/etc/init.d/ledmonitor start"`
+	new="*/10 * * * * /etc/init.d/ledmonitor start"
+	if [ "z${cron}" != "z${new}" ] ; then
+		cat /etc/crontabs/root | grep -v "/etc/init.d/ledmonitor start" > /tmp/crontabs_ledmonitor
+		echo "" >> /tmp/crontabs_ledmonitor
+		echo "*/10 * * * * /etc/init.d/ledmonitor start" >> /tmp/crontabs_ledmonitor
+		cat /tmp/crontabs_ledmonitor | grep -v ^$ > /etc/crontabs/root
+		/etc/init.d/cron restart
+	fi
+}
+
+del_crontab() {
+	[ -f /etc/crontabs/root ] || touch /etc/crontabs/root
+	cron=`cat /etc/crontabs/root | grep "/etc/init.d/ledmonitor start"`
+	if [ "z""${cron}" != "z" ] ; then
+		cat /etc/crontabs/root | grep -v "/etc/init.d/ledmonitor start" > /tmp/crontabs_ledmonitor
+		cat /tmp/crontabs_ledmonitor | grep -v ^$ > /etc/crontabs/root
+		/etc/init.d/cron restart
+	fi
 }

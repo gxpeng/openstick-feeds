@@ -6,8 +6,10 @@
 [ "${ACTION}" = "released" ] || exit 0
 
 lockfile="/tmp/toff.lock"
+lockfile2="/tmp/toff2.lock"
 power_led="/sys/class/leds/red:power"
 delay=1
+delay2=4
 
 touch_lock() {
     touch "$lockfile"
@@ -15,12 +17,30 @@ touch_lock() {
     rm -f "$lockfile"
 }
 
+touch_lock2() {
+    sleep $delay
+    touch "$lockfile2"
+    sleep $delay2
+    rm -f "$lockfile2"
+}
+
 shutdown() {
     /etc/init.d/ledmonitor stop
-    /usr/bin/ledmonitor led_off_all
+    sleep 1
     /usr/bin/ledmonitor led_timer_red
-    sleep 2
+    sleep 3
     /sbin/poweroff -f
+}
+
+turnled() {
+    sleeping=$(uci get ledmonitor.main.sleeping)
+    if [ "z""$sleeping" == "z0" ]; then
+        uci set ledmonitor.main.sleeping="1"
+	uci commit ledmonitor
+    else
+        uci set ledmonitor.main.sleeping="0"
+	uci commit ledmonitor
+    fi
 }
 
 restart_network() {
@@ -37,8 +57,13 @@ elif [ -e "$lockfile" ]; then
     # Double-click Shutdown
     rm -rf "$lockfile"
     shutdown
+elif [ -e "$lockfile2" ]; then
+    # Turn off/on LED
+    rm -rf "$lockfile2"
+    turnled
 else
     touch_lock &
+    touch_lock2 &
 fi
 
 return 0

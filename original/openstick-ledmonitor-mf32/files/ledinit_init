@@ -6,9 +6,10 @@ START=12
 
 
 led_init() {
+	uci set ledmonitor.main.sleeping="0" && uci commit ledmonitor
 	/usr/bin/ledmonitor led_on_all
 	sleep 2
-	/usr/bin/ledmonitor reset_led_monitor
+	/usr/bin/ledmonitor led_init
 }
 
 start(){
